@@ -10,7 +10,7 @@ import matplotlib.animation as animation
 root = Tk()
 root.geometry("1200x800")
 root.title("System Monitor")
-root.configure(bg="#f0f0f0")  # Modern light gray background
+root.configure(bg="#f0f0f0")  
 
 # Create pages
 main_page = Frame(root, bg="#f0f0f0")
