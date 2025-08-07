@@ -136,6 +136,7 @@ for c in cols:
 tree.pack(fill=BOTH, expand=True, padx=20, pady=10)
 tree.tag_configure('suspicious', foreground='red')
 
+# Possivble Viruses
 SUSPICIOUS = {"hacktool", "malware", "ransomware", "keylogger", "virus", "badprocess", "exploit", "coinminer"}
 
 def update_process_list():
