@@ -2,9 +2,12 @@ from tkinter import *
 from tkinter import ttk
 import psutil
 from collections import deque
+from pynvml import *
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.animation as animation
+
+nvmlInit()
 
 root = Tk()
 root.geometry("1200x800")
@@ -14,13 +17,15 @@ root.configure(bg="#f0f0f0")
 main_page = Frame(root, bg="#f0f0f0")
 dashboard_page = Frame(root, bg="#f0f0f0")
 proc_page = Frame(root, bg="#f0f0f0")
+temp_page = Frame(root, bg="#f0f0f0")
 
-for page in (main_page, dashboard_page, proc_page):
+for page in (main_page, dashboard_page, proc_page, temp_page):
     page.grid(row=0, column=0, sticky='nsew')
 
 def show_main(): main_page.tkraise()
 def show_dashboard(): dashboard_page.tkraise()
 def show_proc(): proc_page.tkraise()
+def show_temp(): temp_page.tkraise()
 
 def mod_button(master, text, command):
     return Button(
@@ -31,7 +36,8 @@ def mod_button(master, text, command):
 
 Label(main_page, text="System Monitor", font=("Segoe UI", 24, "bold"), fg="#111", bg="#f0f0f0").pack(pady=30)
 
-for text, cmd in [("Dashboard", show_dashboard), ("Processes", show_proc), ("Quit", root.destroy)]:
+# To add page, add here.
+for text, cmd in [("Dashboard", show_dashboard), ("Processes", show_proc), ("Temperatures", show_temp), ("Quit", root.destroy)]:
     mod_button(main_page, text, cmd).pack(pady=12)
 
 def build_chart(frame, row, column, label_text, data_deque, fetch_func, color='blue', max_val=100, unit='%'):
@@ -100,6 +106,7 @@ canvas_net = FigureCanvasTkAgg(fig_net, master=dashboard_page)
 canvas_net.get_tk_widget().grid(row=2, column=0, columnspan=3, pady=10)
 canvas_net.get_tk_widget().configure(bg='#f0f0f0', highlightthickness=0)
 
+
 def update_net_graph(frame):
     global last_net
     net = psutil.net_io_counters()
@@ -153,8 +160,76 @@ def update_process_list():
 
 update_process_list()
 
+def get_gpu_temperature():
+    try:
+        handle = nvmlDeviceGetHandleByIndex(0)
+        temp = nvmlDeviceGetTemperature(handle, NVML_TEMPERATURE_GPU)
+        return float(temp)
+    except:
+        return 0.0
+
+def get_gpu_temp_color(temp):
+    if temp < 60:
+        return 'green'
+    elif 76 <= temp <= 89:
+        return 'orange'
+    elif temp >= 90:
+        return 'red'
+    else:
+        return 'crimson' # Fallback
+
+Label(temp_page, text="GPU Temperature Monitor", font=("Segoe UI", 18, "bold"), fg="#111", bg="#f0f0f0").pack(pady=15)
+temp_frame = Frame(temp_page, bg="#f0f0f0")
+temp_frame.pack(pady=20)
+
+gpu_temp_data = deque([0]*60, maxlen=60)
+
+fig, ax = plt.subplots(figsize=(4, 2.5), facecolor='#f0f0f0')
+fig.subplots_adjust(left=0.1, right=0.98, top=0.85, bottom=0.2)
+ax.set_facecolor('#f0f0f0')
+
+line, = ax.plot(range(60), gpu_temp_data, color='green', linewidth=2)
+ax.set_ylim(0, 100)
+ax.set_xticks([])
+ax.set_yticks([0, 50, 100])
+ax.set_yticklabels(["0°C", "50°C", "100°C"], color="#333", fontname="Segoe UI", fontsize=9, fontweight="bold")
+ax.set_title("GPU Temperature", color="#333", fontname="Segoe UI", fontsize=13, fontweight="bold", pad=10)
+for spine in ax.spines.values():
+    spine.set_visible(False)
+ax.grid(False)
+
+percent_label = Label(temp_frame, text="0°C", font=("Segoe UI", 15, "bold"), fg='green', bg="#f0f0f0")
+percent_label.grid(row=0, column=0, pady=(10, 0))
+
+canvas = FigureCanvasTkAgg(fig, master=temp_frame)
+canvas.get_tk_widget().grid(row=1, column=0, padx=10, pady=(0, 20))
+canvas.get_tk_widget().configure(bg='#f0f0f0', highlightthickness=0)
+
+def fetch_gpu_temp():
+    temp = get_gpu_temperature()
+    color = get_gpu_temp_color(temp)
+    percent_label.config(fg=color)
+    return temp
+
+def update_gpu_temp_graph(frame):
+    val = fetch_gpu_temp()
+    gpu_temp_data.append(val)
+    line.set_ydata(gpu_temp_data)
+    percent_label.config(text=f"{val:.1f}°C")
+    line.set_color(get_gpu_temp_color(val))
+    return line,
+
+ani_gpu_temp = animation.FuncAnimation(fig, update_gpu_temp_graph, interval=1000, blit=True)
+
 mod_button(dashboard_page, "Back", show_main).grid(row=6, column=1, pady=15)
 mod_button(proc_page, "Back", show_main).pack(pady=15)
+mod_button(temp_page, "Back", show_main).pack(pady=15)
+
+# Clean shutdown
+def safe_close():
+    nvmlShutdown()
+    root.destroy()
+root.protocol("WM_DELETE_WINDOW", safe_close)
 
 show_main()
 root.mainloop()
