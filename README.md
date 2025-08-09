@@ -22,6 +22,20 @@ Features:
    - Shows process names and CPU or memory usage per process.
    - Will highlight red if anything is suspicious.
 
+   
+6. GPU Temperature
+   - Shows real-time GPU temperature using pynvml.
+   - Temperature color-coded:
+     Green: Normal
+     Crimson: Moderate
+     Orange: High
+     Red: Critical
+   - Live chart with recent temperature history.
+
+7. File Viewer & Editor
+   - Search through any directory and open any file.
+   - Edit, change and save the files.
+
 Usage:
 - Run the program to start monitoring.
 - The system stats will be displayed in real-time in the terminal or window.
